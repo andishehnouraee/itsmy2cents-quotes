@@ -1,0 +1,35 @@
+name: Publish quotes
+
+# Rebuilds quotes.json whenever the spreadsheet changes, so uploading a new
+# CSV through the GitHub website is enough to publish an update.
+on:
+  push:
+    paths:
+      - "source/quotes.csv"
+      - "tools/build_quotes.py"
+      - ".github/workflows/publish.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild quotes.json from the spreadsheet
+        run: python3 tools/build_quotes.py
+
+      - name: Commit the result if it changed
+        run: |
+          if git diff --quiet -- quotes.json; then
+            echo "quotes.json unchanged"
+            exit 0
+          fi
+          git config user.name "quotes bot"
+          git config user.email "noreply@github.com"
+          git add quotes.json
+          git commit -m "Rebuild quotes.json from the spreadsheet"
+          git push
